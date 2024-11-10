@@ -26,14 +26,17 @@ export async function POST (req : NextRequest){
 
         const res = await youtubesearchapi.GetVideoDetails(extractedId);
         console.log(res.title);
-        console.log(res.thumbnail.thumbnails)
-        
+        const thumbnails = res.thumbnail.thumbnails;
+        thumbnails.sort((a: {width : number}, b: {width : number}) => a.width < b.width ? -1 : 1);
         const stream = await prismaClient.stream.create({
             data: {
                 userId: data.creatorId,
                 url: data.url,
                 extractedId,
-                type : "YouTube"
+                type : "YouTube", 
+                title : res.title ?? "You sure you are not delusional?",
+                thumbnailSml : (thumbnails.length > 1 ? thumbnails[thumbnails.length-2].url : thumbnails[thumbnails.length-1].url) ?? "https://www.meme-arsenal.com/memes/16616732feb9920563e0e7a487a38d5d.jpg",
+                thumbnaidBig : thumbnails[thumbnails.length-1].url ?? "https://www.meme-arsenal.com/memes/16616732feb9920563e0e7a487a38d5d.jpg"
             }
         });
         return NextResponse.json({
@@ -42,6 +45,7 @@ export async function POST (req : NextRequest){
         })
     }
     catch(e){
+        console.error(e instanceof Error ? e.message : e);
         return NextResponse.json({
             message: "Error while adding a stream"
         },  {
@@ -59,6 +63,6 @@ export async function GET(req : NextRequest){
     })
 
     return NextResponse.json({
-        streams 
+        streams
     })
 }
