@@ -26,10 +26,10 @@ model Stream{
   type          StreamType
   url           String
   extractedId   String
-  title         String
-  thumbnailSml  String
-  thumbnaidBig  String
-  active        Boolean    @default(true)
+  title         String    @default("")
+  thumbnailSml  String    @default("")
+  thumbnaidBig  String    @default("")
+  active        Boolean   @default(true)
   upvotes       Upvote[]
   userId        String
   user          User      @relation(fields: [userId], references: [id])
