@@ -29,7 +29,7 @@ export default function Component() {
     thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/default.jpg'
   })
 
-  const REFRESH_INTERVAL_MS =10 * 1000;
+  const REFRESH_INTERVAL_MS = 10 * 1000;
 
   async function refreshStreams() {
     const res = await fetch(`/api/streams/my`, {
@@ -38,12 +38,12 @@ export default function Component() {
     console.log(res);
   }
 
-  useEffect(() =>{
+  useEffect(() => {
     refreshStreams();
     const interval = setInterval(() => {
 
     }, REFRESH_INTERVAL_MS)
-  })
+  }, [])
 
   const addVideo = async () => {
     const videoId = extractVideoId(videoUrl)
@@ -80,6 +80,8 @@ export default function Component() {
       return newQueue.sort((a, b) => b.votes - a.votes)
     })
   }
+
+
 
   const removeVideo = (index: number) => {
     setVideoQueue(prevQueue => prevQueue.filter((_, i) => i !== index))
