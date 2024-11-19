@@ -56,13 +56,60 @@ export async function POST (req : NextRequest){
 
 export async function GET(req : NextRequest){
     const creatorId = req.nextUrl.searchParams.get("creatorId");
-    const streams = await prismaClient.stream.findMany({
-        where : {
-            userId : creatorId ?? ""
-        }
-    })
+    const extractedId = req.nextUrl.searchParams.get("extractedId");
+    if(creatorId){
+        const streams = await prismaClient.stream.findMany({
+            where : {
+                userId : creatorId ?? ""
+            }
+        })
 
-    return NextResponse.json({
-        streams
-    })
+
+        return NextResponse.json({
+            streams
+        })
+    }
+    if(extractedId){
+        const stream = await prismaClient.stream.findFirst({
+            where: {
+                extractedId: extractedId ?? "" 
+            }
+        })
+        if (!stream) {
+            return NextResponse.json({ error: "Stream not found" }, { status: 404 });
+        }
+        return NextResponse.json({
+            streamId : stream?.id
+        })
+    }
+    else{
+        return NextResponse.json({
+            message: "streamId or extractedId is required"
+        }, {
+            status: 403
+        })
+    }   
 }
+
+// export async function GET_streamId(req: NextRequest){
+//     const str_id = req.nextUrl.searchParams.get("extractedId");
+//     if(!str_id){
+//         return NextResponse.json({
+//             error :  "extractedId is required"
+//         },{
+//             status : 400
+//         })
+//     }
+
+//     const stream = await prismaClient.stream.findFirst({
+//         where: {
+//             extractedId: str_id ?? ""
+//         }
+//     })
+//     if (!stream) {
+//         return NextResponse.json({ error: "Stream not found" }, { status: 404 });
+//     }
+//     return NextResponse.json({
+//         streamId : stream?.id
+//     })
+// } 

@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { ThumbsUp, ThumbsDown, Trash2 } from "lucide-react"
 import Image from 'next/image'
-import axios from 'axios';
+import { getServerSession } from 'next-auth'
+import { NextResponse } from 'next/server'
 
 interface Video {
   id: string
@@ -19,9 +20,59 @@ export default function Component() {
   const [videoUrl, setVideoUrl] = useState('')
   const [videoQueue, setVideoQueue] = useState<Video[]>([
     { id: 'dQw4w9WgXcQ', title: 'Rick Astley - Never Gonna Give You Up', votes: 5, thumbnail: 'https://img.youtube.com/vi/dQw4w9WgXcQ/default.jpg' },
-    { id: 'kJQP7kiw5Fk', title: 'Luis Fonsi - Despacito ft. Daddy Yankee', votes: 3, thumbnail: 'https://img.youtube.com/vi/kJQP7kiw5Fk/default.jpg' },
+    { id: 'kJQP7kiw5Fk', title: 'Luis Fonsi - Despacito ft. Daddy Yankee', votes: 4, thumbnail: 'https://img.youtube.com/vi/kJQP7kiw5Fk/default.jpg' },
     { id: 'JGwWNGJdvx8', title: 'Ed Sheeran - Shape of You', votes: 2, thumbnail: 'https://img.youtube.com/vi/JGwWNGJdvx8/default.jpg' },
   ])
+
+  // Remove the logic after dev
+  const insertStreams = async () => {
+    const userDetailsResponse = await fetch("/api/userContext");
+    
+    if (!userDetailsResponse.ok) {
+        console.log("Failed to fetch user details");
+        return NextResponse.json({
+            message: "failed to fetch user details"
+        });
+    }
+
+    const userDetails = await userDetailsResponse.json();
+    const userId = userDetails.id;
+
+    try {
+        // Using Promise.all to handle multiple async calls
+        await Promise.all(videoQueue.map(async (video) => {
+            const response = await fetch("/api/streams", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    creatorId: userId,
+                    url: `https://www.youtube.com/watch?v=${video.id}`, // Corrected template literal
+                }),
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                console.log("Stream added successfully:", result);
+            } else {
+                console.error("Failed to insert stream:", result.message);
+            }
+        }));
+    } catch (error) {
+        console.error("Error inserting streams:", error);
+      } 
+  };
+  const [isFirstLoad, setIsFirstLoad] = useState(true); 
+  useEffect(() => {
+    if (isFirstLoad) {
+      insertStreams(); 
+      setIsFirstLoad(false); 
+    }
+  }, [isFirstLoad]); 
+  
+
   const [currentVideo, setCurrentVideo] = useState<Video>({
     id: 'dQw4w9WgXcQ',
     title: 'Rick Astley - Never Gonna Give You Up',
@@ -73,15 +124,58 @@ export default function Component() {
     return match ? match[1] : null
   }
 
-  const vote = (index: number, amount: number) => {
-    setVideoQueue(prevQueue => {
-      const newQueue = [...prevQueue]
-      newQueue[index].votes += amount
-      return newQueue.sort((a, b) => b.votes - a.votes)
-    })
+  const vote = async (index: number, amount: number) => {
+    try {
+      const response = await fetch(`/api/streams/?extractedId=${videoQueue[index].id}`)
+      const data = await response.json()
+      const streamId = data.streamId;
+      
+      if (!streamId) {
+        console.log("streamId is wrong")
+        return
+      }
+      
+      const upvoteResponse = await fetch("/api/streams/upvote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          streamId: streamId
+        })
+      });
+      const responseJson = await upvoteResponse.json();
+      if (upvoteResponse.ok && responseJson.message !=="Removing the upvote") {
+        setVideoQueue(prevQueue => {
+          const newQueue = prevQueue.map((video, i) => {
+            if (i === index) {
+              return { ...video, votes: video.votes + amount }
+            }
+            return video
+          })
+          return newQueue.sort((a, b) => b.votes - a.votes)
+        })
+      } else if(responseJson.message === "Removing the upvote"){
+            console.log(responseJson.message)
+            setVideoQueue(prevQueue => {
+              const newQueue = prevQueue.map((video, i) => {
+                if (i === index) {
+                  return { ...video, votes: video.votes - amount }
+                }
+                return video
+              })
+              return newQueue.sort((a, b) => b.votes - a.votes)
+            })
+          }
+          else{
+            console.log(responseJson.message);
+          }
+        }
+    catch (error) {
+      console.error("Error during voting:", error)
+    }
   }
-
-
+  
 
   const removeVideo = (index: number) => {
     setVideoQueue(prevQueue => prevQueue.filter((_, i) => i !== index))

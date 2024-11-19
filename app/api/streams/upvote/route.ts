@@ -25,17 +25,44 @@ export async function POST(req : NextRequest){
     }
     try{
         const data = UpvoteSchema.parse(await req.json());
-        await prismaClient.upvote.create({
-            data : {
-                    userId : user.id,
-                    streamId : data.streamId
-                }
-            });
+        const check = await prismaClient.upvote.findFirst({
+            where: {
+                userId: user.id,
+                streamId: data.streamId
+            }
+        })
+        if(!check){
+            await prismaClient.upvote.create({
+                data : {
+                        userId : user.id,
+                        streamId : data.streamId
+                    }
+                });
+            return NextResponse.json({
+                message: "Done!"
+            })
+        }
+        else{
+            const Upvote = await prismaClient.upvote.delete({
+                   where: {
+                     userId_streamId: {
+                        userId : user.id,
+                        streamId : data.streamId
+                   }
+                  }
+                  })
+            return NextResponse.json({
+                message: "Removing the upvote"
+            }, {
+                status: 200
+            })
+        }    
     }catch(e){
+        console.error(e instanceof Error ? e.message : e);
         return NextResponse.json({
             message : "Error while upvoting"
         }, {
             status: 403
-           })
+           });
        }
     }        
