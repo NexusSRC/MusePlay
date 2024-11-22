@@ -57,6 +57,21 @@ export async function POST (req : NextRequest){
 export async function GET(req : NextRequest){
     const creatorId = req.nextUrl.searchParams.get("creatorId");
     const extractedId = req.nextUrl.searchParams.get("extractedId");
+    const incomingStreamId = req.nextUrl.searchParams.get("streamId");
+    
+    if(creatorId && incomingStreamId){
+        const stream = await prismaClient.stream.findFirst({
+            where: {
+                userId: creatorId,
+                id : incomingStreamId
+            }
+        })
+
+        return NextResponse.json({
+            stream
+        })
+    }
+
     if(creatorId){
         const streams = await prismaClient.stream.findMany({
             where : {
@@ -69,6 +84,7 @@ export async function GET(req : NextRequest){
             streams
         })
     }
+    
     if(extractedId){
         const stream = await prismaClient.stream.findFirst({
             where: {
